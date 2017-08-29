@@ -12,6 +12,8 @@ import { AngularFireAuthModule } from 'angularfire2/auth';
 import { MyApp } from './app.component';
 import { HomePage } from '../pages/home/home';
 
+import { GoogleMaps } from '@ionic-native/google-maps';
+
 export const firebaseConfig = {
   apiKey: "AIzaSyCGKjTrcljnXdIWv6sDALKxiYjTp-UyjLk",
     authDomain: "jddogproject.firebaseapp.com",
@@ -41,6 +43,7 @@ export const firebaseConfig = {
   providers: [
     StatusBar,
     SplashScreen,
+    GoogleMaps,
     {provide: ErrorHandler, useClass: IonicErrorHandler}
   ]
 })
