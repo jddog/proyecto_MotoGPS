@@ -1,74 +1,97 @@
-import { Component } from '@angular/core';
-import { NavController  } from 'ionic-angular';
-import { AngularFireDatabase, FirebaseListObservable } from 'angularfire2/database';
-import { AngularFireAuth } from "angularfire2/auth";
-import * as firebase from 'firebase/app';
-import { Observable } from 'rxjs/Observable';
-import { GoogleMap, GoogleMaps, LatLng, CameraPosition, GoogleMapsEvent, MarkerOptions, Marker } from '@ionic-native/google-maps';
+import { Component, ViewChild, ElementRef } from '@angular/core';
+import { IonicPage, NavController } from 'ionic-angular';
+import { Geolocation } from '@ionic-native/geolocation';
+import {
+  GoogleMaps,
+  GoogleMap,
+  GoogleMapsEvent,
+  GoogleMapOptions,
+  CameraPosition,
+  MarkerOptions,
+  Marker
+ } from '@ionic-native/google-maps';
+
+declare var google;
+
 
 @Component({
   selector: 'page-home',
   templateUrl: 'home.html'
 })
 export class HomePage {
-
-  items: FirebaseListObservable<any[]>;
-  coordenadas: FirebaseListObservable<any[]>;
-  user: Observable<firebase.User>;
-
-  constructor(public navCtrl: NavController, private afDB: AngularFireDatabase, private afAuth: AngularFireAuth, private googleMaps: GoogleMaps) {
-    
-      this.user = afAuth.authState;
-    
-  }
-
-
-  loadMap() {
-    let element = document.getElementById('map');
-    let map: GoogleMap = this.googleMaps.create(element, {});
-
-    //this.coordenadas = this.afDB.list('/Coordenadas');
-
-    
-    let latlng = new LatLng(40.7128, -74.0059);
-
-    map.one(GoogleMapsEvent.MAP_READY).then(() => {
-      let position: CameraPosition<{}> = {
-      target: latlng,
-      zoom: 10,
-      tilt: 30
-      }
-      map.moveCamera(position);
-
-      let markeroptions: MarkerOptions = {
-        position: latlng,
-        title: 'Mi moto'
-      };
+  latitudActual : number;
+  longitudActual: number;
+  @ViewChild('map') mapElement: ElementRef;
+  map: any;
+  marker: any;
+  start="chicago, il";
+  end = "los angeles, ca";
+  directionsService = new google.maps.DirectionsService;
+  directionsDisplay = new google.maps.DirectionsRenderer;
   
-      let marker = map.addMarker(markeroptions).then((marker: Marker) => {
-        marker.showInfoWindow();
-      })
 
-    })
+  constructor(public navCtrl: NavController, private geolocation: Geolocation) {
+    let watch = this.geolocation.watchPosition();
+    
+    this.geolocation.getCurrentPosition().then((data) => {
+        var parent = this;
+        parent.latitudActual = data.coords.latitude;
+        parent.longitudActual = data.coords.longitude;
+
+        this.initMap();
+     }).catch((error) => {
+        console.log('Error getting location', error);
+     });
+
+
+    watch.subscribe((data) => {
+      var parent = this;
+      this.map.setCenter({lat: parseFloat(data.coords.latitude.toString()), lng: parseFloat(data.coords.longitude.toString())});
+      this.marker.setPosition({lat: parseFloat(data.coords.latitude.toString()), lng: parseFloat(data.coords.longitude.toString())});
+     });
+
   }
 
-  pintar(){
-      this.items = this.afDB.list('/productos');
-      console.log(this.items);
+
+  initMap() {
+    var parent = this;
+    this.map = new google.maps.Map(this.mapElement.nativeElement, {
+      zoom: 19,
+      center: {lat: parent.latitudActual, lng: parent.longitudActual}
+    });
+
+    this.marker = new google.maps.Marker({
+      title: 'Mi posición',
+      animation: 'DROP',
+      map: this.map,
+      position: {
+        lat: parent.latitudActual,
+        lng: parent.longitudActual
+      }
+    });
+
+    this.directionsDisplay.setMap(this.map);
   }
 
-
-   login() {
-    this.afAuth.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(x=>{
-
-        this.pintar();
-
+  calculateAndDisplayRoute() {
+    this.directionsService.route({
+      origin: this.start,
+      destination: this.end,
+      travelMode: 'DRIVING'
+    }, (response, status) => {
+      if (status === 'OK') {
+        this.directionsDisplay.setDirections(response);
+      } else {
+        window.alert('Directions request failed due to ' + status);
+      }
     });
   }
 
-   logout() {
-    this.afAuth.auth.signOut();
+
+  testCambioUbicacion(){
+    this.map.setCenter({lat: parseFloat(this.latitudActual.toString()), lng: parseFloat(this.longitudActual.toString())});
+    this.marker.setPosition({lat: parseFloat(this.latitudActual.toString()), lng: parseFloat(this.longitudActual.toString())});
+    console.log("lat: "+this.latitudActual + " , longitud:"+this.longitudActual);
   }
 
 }
-
